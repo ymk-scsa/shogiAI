@@ -43,11 +43,11 @@ class HcpeDataLoader:
     def mini_batch(self, hcpevec):
         self.features.fill(0)
         for i, hcpe in enumerate(hcpevec):
-            self.board.set_hcp(hcpe['hcp'])
-            make_input_features(self.board, self.features[i])
+            self.board.set_hcp(hcpe['hcp']) # ボードを設定
+            make_input_features(self.board, self.features[i]) # 入力特徴量の作成
             self.move_label[i] = make_move_label(
-                hcpe['bestMove16'], self.board.turn)
-            self.result[i] = make_result(hcpe['gameResult'], self.board.turn)
+                hcpe['bestMove16'], self.board.turn) # 正解データ方策
+            self.result[i] = make_result(hcpe['gameResult'], self.board.turn) # 正解データ価値
 
         if self.device.type == 'cpu':
             return (self.torch_features.clone(),

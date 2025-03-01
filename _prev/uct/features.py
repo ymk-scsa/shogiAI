@@ -34,18 +34,18 @@ def make_input_features(board, features):
             features[i:i+num].fill(1)
             i += max_num
 
-# 移動を表すラベルを作成
+# 移動を表すラベルを作成(方策ネットワーク出力)
 def make_move_label(move, color):
     if not move_is_drop(move):  # 駒の移動
-        to_sq = move_to(move)
-        from_sq = move_from(move)
+        to_sq = move_to(move) # 移動元
+        from_sq = move_from(move) # 移動先
 
         # 後手の場合盤を回転
         if color == WHITE:
             to_sq = 80 - to_sq
             from_sq = 80 - from_sq
 
-        # 移動方向
+        # 移動方向を割り出す
         to_x, to_y = divmod(to_sq, 9)
         from_x, from_y = divmod(from_sq, 9)
         dir_x = to_x - from_x
@@ -88,7 +88,7 @@ def make_move_label(move, color):
 
     return move_direction * 81 + to_sq
 
-# 対局結果から報酬を作成
+# 対局結果から報酬を作成(価値ネットワーク出力)
 def make_result(game_result, color):
     if color == BLACK:
         if game_result == BLACK_WIN:

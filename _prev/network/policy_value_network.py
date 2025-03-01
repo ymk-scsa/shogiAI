@@ -12,6 +12,7 @@ class Bias(nn.Module):
     def forward(self, input):
         return input + self.bias
 
+# ニューラルネットワーク構築class
 class ResNetBlock(nn.Module):
     def __init__(self, channels):
         super(ResNetBlock, self).__init__()

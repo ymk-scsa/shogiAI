@@ -91,6 +91,7 @@ def save_checkpoint():
 
 # 訓練ループ
 for e in range(args.epoch):
+    # 初期化処理
     epoch += 1
     steps_interval = 0
     sum_loss_policy_interval = 0
@@ -98,6 +99,7 @@ for e in range(args.epoch):
     steps_epoch = 0
     sum_loss_policy_epoch = 0
     sum_loss_value_epoch = 0
+    # データごとに繰り返す
     for x, move_label, result in train_dataloader:
         model.train()
 
