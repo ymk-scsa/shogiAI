@@ -5,7 +5,7 @@ import logging
 import torch
 
 from cshogi import Board, HuffmanCodedPosAndEval
-from pydlshogi2.features import FEATURES_NUM, make_input_features, make_move_label, make_result
+from app.domain.features import FEATURES_NUM, make_input_features, make_move_label, make_result
 
 
 class HcpeDataLoader:
@@ -37,34 +37,35 @@ class HcpeDataLoader:
                 logging.info(path)
                 data.append(np.fromfile(path, dtype=HuffmanCodedPosAndEval))
             else:
-                logging.warn('{} not found, skipping'.format(path))
+                logging.warn("{} not found, skipping".format(path))
         self.data = np.concatenate(data)
 
     def mini_batch(self, hcpevec):
         self.features.fill(0)
         for i, hcpe in enumerate(hcpevec):
-            self.board.set_hcp(hcpe['hcp']) # ボードを設定
-            make_input_features(self.board, self.features[i]) # 入力特徴量の作成
-            self.move_label[i] = make_move_label(
-                hcpe['bestMove16'], self.board.turn) # 正解データ方策
-            self.result[i] = make_result(hcpe['gameResult'], self.board.turn) # 正解データ価値
+            self.board.set_hcp(hcpe["hcp"])  # ボードを設定
+            make_input_features(self.board, self.features[i])  # 入力特徴量の作成
+            self.move_label[i] = make_move_label(hcpe["bestMove16"], self.board.turn)  # 正解データ方策
+            self.result[i] = make_result(hcpe["gameResult"], self.board.turn)  # 正解データ価値
 
-        if self.device.type == 'cpu':
-            return (self.torch_features.clone(),
-                    self.torch_move_label.clone(),
-                    self.torch_result.clone(),
-                    )
+        if self.device.type == "cpu":
+            return (
+                self.torch_features.clone(),
+                self.torch_move_label.clone(),
+                self.torch_result.clone(),
+            )
         else:
-            return (self.torch_features.to(self.device),
-                    self.torch_move_label.to(self.device),
-                    self.torch_result.to(self.device),
-                    )
+            return (
+                self.torch_features.to(self.device),
+                self.torch_move_label.to(self.device),
+                self.torch_result.to(self.device),
+            )
 
     def sample(self):
         return self.mini_batch(np.random.choice(self.data, self.batch_size, replace=False))
 
     def pre_fetch(self):
-        hcpevec = self.data[self.i:self.i+self.batch_size]
+        hcpevec = self.data[self.i : self.i + self.batch_size]
         self.i += self.batch_size
         if len(hcpevec) < self.batch_size:
             return
@@ -89,4 +90,4 @@ class HcpeDataLoader:
         self.pre_fetch()
 
         return result
-        #dlshogi 1/6
+        # dlshogi 1/6

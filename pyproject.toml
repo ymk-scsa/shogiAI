@@ -21,3 +21,12 @@ exclude = ["_prev"]
 
 [tool.mypy]
 exclude = "^(_prev)/.*"
+[[tool.mypy.overrides]]
+module = "cshogi"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "onnxruntime"
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = "cshogi.dlshogi"
+ignore_missing_imports = true

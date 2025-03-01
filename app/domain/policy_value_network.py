@@ -2,15 +2,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from pydlshogi2.features import FEATURES_NUM, MOVE_PLANES_NUM, MOVE_LABELS_NUM
+from app.domain.features import FEATURES_NUM, MOVE_PLANES_NUM, MOVE_LABELS_NUM
+
 
 class Bias(nn.Module):
     def __init__(self, shape):
         super(Bias, self).__init__()
-        self.bias=nn.Parameter(torch.zeros(shape))
+        self.bias = nn.Parameter(torch.zeros(shape))
 
     def forward(self, input):
         return input + self.bias
+
 
 # ニューラルネットワーク構築class
 class ResNetBlock(nn.Module):
@@ -30,6 +32,7 @@ class ResNetBlock(nn.Module):
         out = self.bn2(out)
 
         return F.relu(out + x)
+
 
 class PolicyValueNetwork(nn.Module):
     def __init__(self, blocks=10, channels=192, fcl=256):
@@ -67,4 +70,4 @@ class PolicyValueNetwork(nn.Module):
         value = self.value_fc2(value)
 
         return policy, value
-        #dlshogi 1/6
+        # dlshogi 1/6
