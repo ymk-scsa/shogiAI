@@ -2,8 +2,7 @@ import onnxruntime
 import numpy as np
 
 from app.usecases.mcts_player import MCTSPlayer
-from app.domain.features import make_input_features, make_move_label
-from cshogi.dlshogi import FEATURES1_NUM, FEATURES2_NUM
+from cshogi.dlshogi import make_input_features, make_move_label, FEATURES1_NUM, FEATURES2_NUM
 
 
 class OnnxPlayer(MCTSPlayer):

@@ -2,8 +2,12 @@ import typer
 from typing_extensions import Annotated
 
 from app.interfaces.logger import Logger
+from app.interfaces.cli import cli_app
 
 app = typer.Typer()
+
+
+app.add_typer(cli_app)
 
 
 @app.command()
