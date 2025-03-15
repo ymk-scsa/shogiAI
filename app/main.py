@@ -12,8 +12,10 @@ app.add_typer(cli_app)
 
 @app.command()
 def test_log(message: Annotated[str, typer.Option(help="test text in log")]) -> None:
-    logger = Logger("test_log").get_logger()
-    logger.info(message)
+    logger_1 = Logger("test_log_1").get_logger()
+    logger_1.info(message)
+    logger_2 = Logger("test_log_2").get_logger()
+    logger_2.info(message)
 
 
 @app.command()
