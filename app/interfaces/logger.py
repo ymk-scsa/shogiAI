@@ -6,7 +6,7 @@ from typing import Optional
 class Logger:
     """アプリケーション全体で統一して利用するロガークラス"""
 
-    def __init__(self, name: str, log_level: Optional[str] = None, log_file: Optional[str] = None):
+    def __init__(self, name: str, log_level: Optional[str] = None, log_file: Optional[str] = None) -> None:
         self.logger = logging.getLogger(name)
 
         # 引数 > 環境変数 > デフォルト

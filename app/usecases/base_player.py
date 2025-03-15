@@ -1,44 +1,68 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, Future
+from typing import Optional, TypedDict
+from typing_extensions import TypeAlias
+
+# USIコマンドの戻り値の型
+UsiResponse: TypeAlias = tuple[str, Optional[str]]
+
+
+class SetLimitsArgDict(TypedDict, total=False):
+    btime: Optional[int]
+    wtime: Optional[int]
+    byoyomi: Optional[int]
+    binc: Optional[int]
+    winc: Optional[int]
+    nodes: Optional[int]
+    infinite: bool
+    ponder: bool
 
 
 class BasePlayer:
-    def __init__(self):
+    def __init__(self) -> None:
         self.executor = ThreadPoolExecutor(max_workers=1)
-        self.future = None
+        self.future: Optional[Future[UsiResponse]] = None
 
-    def usi(self):
+    def usi(self) -> None:
         pass
 
-    def usinewgame(self):
+    def usinewgame(self) -> None:
         pass
 
-    def setoption(self, args):
+    def setoption(self, args: list[str]) -> None:
         pass
 
-    def isready(self):
+    def isready(self) -> None:
         pass
 
-    def position(self, sfen, usi_moves):
+    def position(self, sfen: str, usi_moves: list[str]) -> None:
         pass
 
     def set_limits(
-        self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False
-    ):
+        self,
+        btime: Optional[int] = None,
+        wtime: Optional[int] = None,
+        byoyomi: Optional[int] = None,
+        binc: Optional[int] = None,
+        winc: Optional[int] = None,
+        nodes: Optional[int] = None,
+        infinite: bool = False,
+        ponder: bool = False,
+    ) -> None:
         pass
 
-    def go(self):
+    def go(self) -> UsiResponse:
+        raise NotImplementedError
+
+    def stop(self) -> None:
         pass
 
-    def stop(self):
+    def ponderhit(self, last_limits: SetLimitsArgDict) -> None:
         pass
 
-    def ponderhit(self, last_limits):
+    def quit(self) -> None:
         pass
 
-    def quit(self):
-        pass
-
-    def run(self):
+    def run(self) -> None:
         while True:
             cmd_line = input().strip()
             cmd = cmd_line.split(" ", 1)
@@ -58,7 +82,7 @@ class BasePlayer:
                 args = cmd[1].split("moves")
                 self.position(args[0].strip(), args[1].split() if len(args) > 1 else [])
             elif cmd[0] == "go":
-                kwargs = {}
+                kwargs: SetLimitsArgDict = {}
                 if len(cmd) > 1:
                     args = cmd[1].split(" ")
                     if args[0] == "infinite":
@@ -68,14 +92,25 @@ class BasePlayer:
                             kwargs["ponder"] = True
                             args = args[1:]
                         for i in range(0, len(args) - 1, 2):
-                            if args[i] in ["btime", "wtime", "byoyomi", "binc", "winc", "nodes"]:
-                                kwargs[args[i]] = int(args[i + 1])
+                            key = args[i]
+                            if key == "btime":
+                                kwargs["btime"] = int(args[i + 1])
+                            elif key == "wtime":
+                                kwargs["wtime"] = int(args[i + 1])
+                            elif key == "byoyomi":
+                                kwargs["byoyomi"] = int(args[i + 1])
+                            elif key == "binc":
+                                kwargs["binc"] = int(args[i + 1])
+                            elif key == "winc":
+                                kwargs["winc"] = int(args[i + 1])
+                            elif key == "nodes":
+                                kwargs["nodes"] = int(args[i + 1])
                 self.set_limits(**kwargs)
                 # ponderhitのために条件と経過時間を保存
                 last_limits = kwargs
                 need_print_bestmove = "ponder" not in kwargs and "infinite" not in kwargs
 
-                def go_and_print_bestmove():
+                def go_and_print_bestmove() -> UsiResponse:
                     bestmove, ponder_move = self.go()
                     if need_print_bestmove:
                         print("bestmove " + bestmove + (" ponder " + ponder_move if ponder_move else ""), flush=True)

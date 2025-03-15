@@ -24,7 +24,7 @@ def train(
     resume: Annotated[str, typer.Option("-r", help="Resume from snapshot")] = "",
     eval_interval: Annotated[int, typer.Option(help="evaluation interval")] = 100,
     log: Annotated[Optional[str], typer.Option(help="log file path")] = None,
-):
+) -> None:
     """Train policy value network"""
 
     logging = Logger("train", log_file=log).get_logger()
@@ -51,11 +51,11 @@ def train(
     # チェックポイント読み込み
     if resume:
         logging.info("Loading the checkpoint from {}".format(resume))
-        checkpoint = torch.load(resume, map_location=device)
-        epoch = checkpoint["epoch"]
-        t = checkpoint["t"]
-        model.load_state_dict(checkpoint["model"])
-        optimizer.load_state_dict(checkpoint["optimizer"])
+        checkpoint_data = torch.load(resume, map_location=device)
+        epoch = int(checkpoint_data["epoch"])
+        t = int(checkpoint_data["t"])
+        model.load_state_dict(checkpoint_data["model"])
+        optimizer.load_state_dict(checkpoint_data["optimizer"])
         # 学習率を引数の値に変更
         optimizer.param_groups[0]["lr"] = lr
     else:
@@ -74,26 +74,26 @@ def train(
     logging.info("test position num = {}".format(len(test_dataloader)))
 
     # 方策の正解率
-    def accuracy(y, t):
+    def accuracy(y: torch.Tensor, t: torch.Tensor) -> float:
         return (torch.max(y, 1)[1] == t).sum().item() / len(t)
 
     # 価値の正解率
-    def binary_accuracy(y, t):
+    def binary_accuracy(y: torch.Tensor, t: torch.Tensor) -> float:
         pred = y >= 0
         truth = t >= 0.5
         return pred.eq(truth).sum().item() / len(t)
 
     # チェックポイント保存
-    def save_checkpoint(checkpoint):
-        path = checkpoint.format(**{"epoch": epoch, "step": t})
+    def save_checkpoint(checkpoint_path: str) -> None:
+        path = checkpoint_path.format(epoch=epoch, step=t)
         logging.info("Saving the checkpoint to {}".format(path))
-        checkpoint = {
+        checkpoint_data = {
             "epoch": epoch,
             "t": t,
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict(),
         }
-        torch.save(checkpoint, path)
+        torch.save(checkpoint_data, path)
 
     # 訓練ループ
     for e in range(epoch):
@@ -178,8 +178,8 @@ def train(
         test_steps = 0
         sum_test_loss_policy = 0
         sum_test_loss_value = 0
-        sum_test_accuracy_policy = 0
-        sum_test_accuracy_value = 0
+        sum_test_accuracy_policy: float = 0
+        sum_test_accuracy_value: float = 0
         model.eval()
         with torch.no_grad():
             for x, move_label, result in test_dataloader:

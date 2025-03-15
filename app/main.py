@@ -11,15 +11,15 @@ app.add_typer(cli_app)
 
 
 @app.command()
-def test_log(message: Annotated[str, typer.Option(help="test text in log")]):
+def test_log(message: Annotated[str, typer.Option(help="test text in log")]) -> None:
     logger = Logger("test_log").get_logger()
     logger.info(message)
 
 
 @app.command()
-def main():
+def main() -> None:
     # typerコマンド用に仮置き
-    logger = Logger("main")
+    logger = Logger("main").get_logger()
     logger.debug("start main")
 
 

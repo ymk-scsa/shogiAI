@@ -9,7 +9,7 @@ cli_app.add_typer(train_app)
 
 
 @cli_app.command()
-def play_person():
+def play_person() -> None:
     logging = Logger("cli_train").get_logger()
     logging.debug("start train")
 
