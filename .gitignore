@@ -180,3 +180,6 @@ datas/*
 
 # floodgate data
 floodgate/*
+
+# checkpoints
+checkpoints/*
