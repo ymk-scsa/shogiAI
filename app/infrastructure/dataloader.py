@@ -8,25 +8,31 @@ import torch
 from cshogi import Board, HuffmanCodedPosAndEval
 from app.domain.features import FEATURES_NUM, make_input_features, make_move_label, make_result
 
+from app.interfaces.logger import Logger
+
 
 class HcpeDataLoader:
     def __init__(
         self, files: Union[list[str], tuple[str], str], batch_size: int, device: torch.device, shuffle: bool = False
     ) -> None:
+        self.logging = Logger("hcpe dataloder").get_logger()
         self.load(files)
         self.batch_size = batch_size
         self.device = device
         self.shuffle = shuffle
 
-        self.torch_features = torch.empty((batch_size, FEATURES_NUM, 9, 9), dtype=torch.float32, pin_memory=True)
-        self.torch_move_label = torch.empty((batch_size), dtype=torch.int64, pin_memory=True)
-        self.torch_result = torch.empty((batch_size, 1), dtype=torch.float32, pin_memory=True)
+        self.torch_features = torch.empty(
+            (batch_size, FEATURES_NUM, 9, 9), dtype=torch.float32, pin_memory=device.type != "cpu"
+        )
+        self.torch_move_label = torch.empty((batch_size), dtype=torch.int64, pin_memory=device.type != "cpu")
+        self.torch_result = torch.empty((batch_size, 1), dtype=torch.float32, pin_memory=device.type != "cpu")
 
         self.features = self.torch_features.numpy()
         self.move_label = self.torch_move_label.numpy()
         self.result = self.torch_result.numpy().reshape(-1)
 
         self.i = 0
+        self.l = 0
         self.executor = ThreadPoolExecutor(max_workers=1)
 
         self.board = Board()
@@ -71,25 +77,33 @@ class HcpeDataLoader:
         hcpevec = self.data[self.i : self.i + self.batch_size]
         self.i += self.batch_size
         if len(hcpevec) < self.batch_size:
+            self.logging.debug("len(hcpevec) < self.batch_size")
             return
+        # if len(hcpevec) <= 0:
+        #    return
 
         self.f = self.executor.submit(self.mini_batch, hcpevec)
+        self.logging.debug("pre_fetched")
 
     def __len__(self) -> int:
         return len(self.data)
 
     def __iter__(self) -> "HcpeDataLoader":
+        self.logging.debug("iter")
         self.i = 0
+        self.l = 0
         if self.shuffle:
             np.random.shuffle(self.data)
         self.pre_fetch()
         return self
 
     def __next__(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        if self.i > len(self.data):
+        self.logging.debug(f"self.l:{self.l}, self.data{len(self.data)}")
+        if self.l > len(self.data):
             raise StopIteration()
 
         result = self.f.result()
+        self.l = self.i
         self.pre_fetch()
 
         return result
