@@ -44,4 +44,8 @@ direnv allow .
 
 echo "✅ direnvがセットアップされました。"
 
+# torch関係のセットアップ(GPUごとにバージョンを分けてもいい)
+echo "🔧 pytorchのセットアップ中..."
+uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+
 echo "🚀 セットアップが完了しました！"
