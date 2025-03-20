@@ -1,11 +1,21 @@
 import numpy as np
 import torch
+from typing import Optional, Union
 
-from cshogi import Board, BLACK, NOT_REPETITION, REPETITION_DRAW, REPETITION_WIN, REPETITION_SUPERIOR, move_to_usi
-from pydlshogi2.features import FEATURES_NUM, make_input_features, make_move_label
-from pydlshogi2.uct.uct_node import NodeTree
-from pydlshogi2.network.policy_value_resnet import PolicyValueNetwork
-from pydlshogi2.player.base_player import BasePlayer
+from cshogi import (
+    Board,
+    BLACK,
+    WHITE,
+    NOT_REPETITION,
+    REPETITION_DRAW,
+    REPETITION_WIN,
+    REPETITION_SUPERIOR,
+    move_to_usi,
+)
+from app.domain.features import FEATURES_NUM, make_input_features, make_move_label
+from app.domain.uct_node import NodeTree, UctNode
+from app.domain.policy_value_network import PolicyValueNetwork
+from app.usecases.base_player import BasePlayer
 
 import time
 import math
@@ -41,8 +51,9 @@ DISCARDED = -2
 # Virtual Loss
 VIRTUAL_LOSS = 1
 
+
 # 温度パラメータを適用した確率分布を取得
-def softmax_temperature_with_normalize(logits, temperature):
+def softmax_temperature_with_normalize(logits: np.ndarray, temperature: float) -> np.ndarray[np.float32, np.float32]:
     # 温度パラメータを適用
     logits /= temperature
 
@@ -56,120 +67,133 @@ def softmax_temperature_with_normalize(logits, temperature):
 
     return probabilities
 
+
 # ノード更新
-def update_result(current_node, next_index, result):
+def update_result(current_node: UctNode, next_index: int, result: float) -> None:
     current_node.sum_value += result
     current_node.move_count += 1 - VIRTUAL_LOSS
     current_node.child_sum_value[next_index] += result
     current_node.child_move_count[next_index] += 1 - VIRTUAL_LOSS
 
+
 # 評価待ちキューの要素
 class EvalQueueElement:
-    def set(self, node, color):
+    def __init__(self) -> None:
+        self.node: Optional[UctNode] = None
+        self.color: Optional[int] = None
+
+    def set(self, node: UctNode, color: int) -> None:
         self.node = node
         self.color = color
 
+
 class MCTSPlayer(BasePlayer):
     # USIエンジンの名前
-    name = 'python-dlshogi2'
+    name = "python-dlshogi2"
     # デフォルトチェックポイント
-    DEFAULT_MODELFILE = 'checkpoints/checkpoint.pth'
+    DEFAULT_MODELFILE = "checkpoints/checkpoint.pth"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # チェックポイントのパス
-        self.modelfile = self.DEFAULT_MODELFILE
+        self.modelfile: str = self.DEFAULT_MODELFILE
         # モデル
-        self.model = None
+        self.model: Optional[PolicyValueNetwork] = None
         # 入力特徴量
-        self.features = None
+        self.features: Optional[torch.Tensor] = None
         # 評価待ちキュー
-        self.eval_queue = None
+        self.eval_queue: Optional[list[EvalQueueElement]] = None
         # バッチインデックス
-        self.current_batch_index = 0
+        self.current_batch_index: int = 0
 
         # ルート局面
-        self.root_board = Board()
+        self.root_board: Board = Board()
         # ゲーム木
-        self.tree = NodeTree()
+        self.tree: NodeTree = NodeTree()
 
         # プレイアウト回数
-        self.playout_count = 0
+        self.playout_count: int = 0
         # 中断するプレイアウト回数
-        self.halt = None
+        self.halt: Optional[int] = None
 
         # GPU ID
-        self.gpu_id = DEFAULT_GPU_ID
+        self.gpu_id: int = DEFAULT_GPU_ID
         # デバイス
-        self.device = None
+        self.device: Optional[Union[str, torch.device, int]] = None
         # バッチサイズ
-        self.batch_size = DEFAULT_BATCH_SIZE
+        self.batch_size: int = DEFAULT_BATCH_SIZE
 
         # 投了する勝率の閾値
-        self.resign_threshold = DEFAULT_RESIGN_THRESHOLD
+        self.resign_threshold: float = DEFAULT_RESIGN_THRESHOLD
         # PUCTの定数
-        self.c_puct = DEFAULT_C_PUCT
+        self.c_puct: float = DEFAULT_C_PUCT
         # 温度パラメータ
-        self.temperature = DEFAULT_TEMPERATURE
+        self.temperature: float = DEFAULT_TEMPERATURE
         # 持ち時間マージン(ms)
-        self.time_margin = DEFAULT_TIME_MARGIN
+        self.time_margin: int = DEFAULT_TIME_MARGIN
         # 秒読みマージン(ms)
-        self.byoyomi_margin = DEFAULT_BYOYOMI_MARGIN
+        self.byoyomi_margin: int = DEFAULT_BYOYOMI_MARGIN
         # PV表示間隔
-        self.pv_interval = DEFAULT_PV_INTERVAL
+        self.pv_interval: int = DEFAULT_PV_INTERVAL
 
         self.debug = False
 
-    def usi(self):
-        print('id name ' + self.name)
-        print('option name USI_Ponder type check default false')
-        print('option name modelfile type string default ' + self.DEFAULT_MODELFILE)
-        print('option name gpu_id type spin default ' + str(DEFAULT_GPU_ID) + ' min -1 max 7')
-        print('option name batchsize type spin default ' + str(DEFAULT_BATCH_SIZE) + ' min 1 max 256')
-        print('option name resign_threshold type spin default ' + str(int(DEFAULT_RESIGN_THRESHOLD * 100)) + ' min 0 max 100')
-        print('option name c_puct type spin default ' + str(int(DEFAULT_C_PUCT * 100)) + ' min 10 max 1000')
-        print('option name temperature type spin default ' + str(int(DEFAULT_TEMPERATURE * 100)) + ' min 10 max 1000')
-        print('option name time_margin type spin default ' + str(DEFAULT_TIME_MARGIN) + ' min 0 max 1000')
-        print('option name byoyomi_margin type spin default ' + str(DEFAULT_BYOYOMI_MARGIN) + ' min 0 max 1000')
-        print('option name pv_interval type spin default ' + str(DEFAULT_PV_INTERVAL) + ' min 0 max 10000')
-        print('option name debug type check default false')
+    def usi(self) -> None:
+        print("id name " + self.name)
+        print("option name USI_Ponder type check default false")
+        print("option name modelfile type string default " + self.DEFAULT_MODELFILE)
+        print("option name gpu_id type spin default " + str(DEFAULT_GPU_ID) + " min -1 max 7")
+        print("option name batchsize type spin default " + str(DEFAULT_BATCH_SIZE) + " min 1 max 256")
+        print(
+            "option name resign_threshold type spin default "
+            + str(int(DEFAULT_RESIGN_THRESHOLD * 100))
+            + " min 0 max 100"
+        )
+        print("option name c_puct type spin default " + str(int(DEFAULT_C_PUCT * 100)) + " min 10 max 1000")
+        print("option name temperature type spin default " + str(int(DEFAULT_TEMPERATURE * 100)) + " min 10 max 1000")
+        print("option name time_margin type spin default " + str(DEFAULT_TIME_MARGIN) + " min 0 max 1000")
+        print("option name byoyomi_margin type spin default " + str(DEFAULT_BYOYOMI_MARGIN) + " min 0 max 1000")
+        print("option name pv_interval type spin default " + str(DEFAULT_PV_INTERVAL) + " min 0 max 10000")
+        print("option name debug type check default false")
 
-    def setoption(self, args):
-        if args[1] == 'modelfile':
+    def setoption(self, args: list[str]) -> None:
+        if args[1] == "modelfile":
             self.modelfile = args[3]
-        elif args[1] == 'gpu_id':
+        elif args[1] == "gpu_id":
             self.gpu_id = int(args[3])
-        elif args[1] == 'batchsize':
+        elif args[1] == "batchsize":
             self.batch_size = int(args[3])
-        elif args[1] == 'resign_threshold':
+        elif args[1] == "resign_threshold":
             self.resign_threshold = int(args[3]) / 100
-        elif args[1] == 'c_puct':
+        elif args[1] == "c_puct":
             self.c_puct = int(args[3]) / 100
-        elif args[1] == 'temperature':
+        elif args[1] == "temperature":
             self.temperature = int(args[3]) / 100
-        elif args[1] == 'time_margin':
+        elif args[1] == "time_margin":
             self.time_margin = int(args[3])
-        elif args[1] == 'byoyomi_margin':
+        elif args[1] == "byoyomi_margin":
             self.byoyomi_margin = int(args[3])
-        elif args[1] == 'pv_interval':
+        elif args[1] == "pv_interval":
             self.pv_interval = int(args[3])
-        elif args[1] == 'debug':
-            self.debug = args[3] == 'true'
+        elif args[1] == "debug":
+            self.debug = args[3] == "true"
 
     # モデルのロード
-    def load_model(self):
+    def load_model(self) -> None:
         self.model = PolicyValueNetwork()
         self.model.to(self.device)
         checkpoint = torch.load(self.modelfile, map_location=self.device)
-        self.model.load_state_dict(checkpoint['model'])
+        self.model.load_state_dict(checkpoint["model"])
         # モデルを評価モードにする
         self.model.eval()
 
     # 入力特徴量の初期化
-    def init_features(self):
-        self.features = torch.empty((self.batch_size, FEATURES_NUM, 9, 9), dtype=torch.float32, pin_memory=(self.gpu_id >= 0))
+    def init_features(self) -> None:
+        self.features = torch.empty(
+            (self.batch_size, FEATURES_NUM, 9, 9), dtype=torch.float32, pin_memory=(self.gpu_id >= 0)
+        )
 
-    def isready(self):
+    def isready(self) -> None:
         # デバイス
         if self.gpu_id >= 0:
             self.device = torch.device(f"cuda:{self.gpu_id}")
@@ -195,10 +219,10 @@ class MCTSPlayer(BasePlayer):
             self.queue_node(self.root_board, current_node)
         self.eval_node()
 
-    def position(self, sfen, usi_moves):
-        if sfen == 'startpos':
+    def position(self, sfen: str, usi_moves: list[str]) -> None:
+        if sfen == "startpos":
             self.root_board.reset()
-        elif sfen[:5] == 'sfen ':
+        elif sfen[:5] == "sfen ":
             self.root_board.set_sfen(sfen[5:])
 
         starting_pos_key = self.root_board.zobrist_hash()
@@ -212,11 +236,21 @@ class MCTSPlayer(BasePlayer):
         if self.debug:
             print(self.root_board)
 
-    def set_limits(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
+    def set_limits(
+        self,
+        btime: Optional[int] = None,
+        wtime: Optional[int] = None,
+        byoyomi: Optional[int] = None,
+        binc: Optional[int] = None,
+        winc: Optional[int] = None,
+        nodes: Optional[int] = None,
+        infinite: bool = False,
+        ponder: bool = False,
+    ) -> None:
         # 探索回数の閾値を設定
         if infinite or ponder:
             # infiniteもしくはponderの場合は、探索を打ち切らないため、32ビット整数の最大値を設定する
-            self.halt = 2**31-1
+            self.halt = 2**31 - 1
         elif nodes:
             # プレイアウト数固定
             self.halt = nodes
@@ -240,17 +274,17 @@ class MCTSPlayer(BasePlayer):
                 self.extend_time = self.time_limit > self.minimum_time
                 self.halt = None
 
-    def go(self):
+    def go(self) -> tuple[str, Optional[str]]:
         # 探索開始時刻の記録
         self.begin_time = time.time()
 
         # 投了チェック
         if self.root_board.is_game_over():
-            return 'resign', None
+            return "resign", None
 
         # 入玉宣言勝ちチェック
         if self.root_board.is_nyugyoku():
-            return 'win', None
+            return "win", None
 
         current_node = self.tree.current_head
 
@@ -258,12 +292,12 @@ class MCTSPlayer(BasePlayer):
         if current_node.value == VALUE_WIN:
             matemove = self.root_board.mate_move(3)
             if matemove != 0:
-                print('info score mate 3 pv {}'.format(move_to_usi(matemove)), flush=True)
+                print("info score mate 3 pv {}".format(move_to_usi(matemove)), flush=True)
                 return move_to_usi(matemove), None
         if not self.root_board.is_check():
             matemove = self.root_board.mate_move_in_1ply()
             if matemove:
-                print('info score mate 1 pv {}'.format(move_to_usi(matemove)), flush=True)
+                print("info score mate 1 pv {}".format(move_to_usi(matemove)), flush=True)
                 return move_to_usi(matemove), None
 
         # プレイアウト数をクリア
@@ -296,23 +330,29 @@ class MCTSPlayer(BasePlayer):
         # for debug
         if self.debug:
             for i in range(len(current_node.child_move)):
-                print('{:3}:{:5} move_count:{:4} nn_rate:{:.5f} win_rate:{:.5f}'.format(
-                    i, move_to_usi(current_node.child_move[i]),
-                    current_node.child_move_count[i],
-                    current_node.policy[i],
-                    current_node.child_sum_value[i] / current_node.child_move_count[i] if current_node.child_move_count[i] > 0 else 0))
+                print(
+                    "{:3}:{:5} move_count:{:4} nn_rate:{:.5f} win_rate:{:.5f}".format(
+                        i,
+                        move_to_usi(current_node.child_move[i]),
+                        current_node.child_move_count[i],
+                        current_node.policy[i],
+                        current_node.child_sum_value[i] / current_node.child_move_count[i]
+                        if current_node.child_move_count[i] > 0
+                        else 0,
+                    )
+                )
 
         # 閾値未満の場合投了
         if bestvalue < self.resign_threshold:
-            return 'resign', None
+            return "resign", None
 
         return move_to_usi(bestmove), move_to_usi(ponder_move) if ponder_move else None
 
-    def stop(self):
+    def stop(self) -> None:
         # すぐに中断する
         self.halt = 0
 
-    def ponderhit(self, last_limits):
+    def ponderhit(self, last_limits: dict) -> None:
         # 探索開始時刻の記録
         self.begin_time = time.time()
         self.last_pv_print_time = 0
@@ -323,11 +363,11 @@ class MCTSPlayer(BasePlayer):
         # 探索回数の閾値を設定
         self.set_limits(**last_limits)
 
-    def quit(self):
+    def quit(self) -> None:
         self.stop()
 
-    def search(self):
-        self.last_pv_print_time = 0
+    def search(self) -> None:
+        self.last_pv_print_time: float = 0
 
         # 探索経路のバッチ
         trajectories_batch = []
@@ -397,7 +437,7 @@ class MCTSPlayer(BasePlayer):
                     self.get_bestmove_and_print_pv()
 
     # UCT探索
-    def uct_search(self, board, current_node, trajectories):
+    def uct_search(self, board: Board, current_node: UctNode, trajectories: list) -> float:
         # 子ノードのリストが初期化されていない場合、初期化する
         if not current_node.child_node:
             current_node.child_node = [None for _ in range(len(current_node.child_move))]
@@ -477,10 +517,13 @@ class MCTSPlayer(BasePlayer):
         return 1.0 - result
 
     # UCB値が最大の手を求める
-    def select_max_ucb_child(self, node):
-        q = np.divide(node.child_sum_value, node.child_move_count,
+    def select_max_ucb_child(self, node: UctNode):
+        q = np.divide(
+            node.child_sum_value,
+            node.child_move_count,
             out=np.zeros(len(node.child_move), np.float32),
-            where=node.child_move_count != 0)
+            where=node.child_move_count != 0,
+        )
         if node.move_count == 0:
             u = 1.0
         else:
@@ -490,7 +533,7 @@ class MCTSPlayer(BasePlayer):
         return np.argmax(ucb)
 
     # 最善手取得とinfoの表示
-    def get_bestmove_and_print_pv(self):
+    def get_bestmove_and_print_pv(self) -> tuple[str, float, Optional[int]]:
         # 探索にかかった時間を求める
         finish_time = time.time() - self.begin_time
 
@@ -520,27 +563,32 @@ class MCTSPlayer(BasePlayer):
             if pv_node is None or pv_node.child_move is None or pv_node.move_count == 0:
                 break
             selected_index = np.argmax(pv_node.child_move_count)
-            pv += ' ' + move_to_usi(pv_node.child_move[selected_index])
+            pv += " " + move_to_usi(pv_node.child_move[selected_index])
             if ponder_move is None:
                 ponder_move = pv_node.child_move[selected_index]
 
-        print('info nps {} time {} nodes {} score cp {} pv {}'.format(
-            int(self.playout_count / finish_time) if finish_time > 0 else 0,
-            int(finish_time * 1000),
-            current_node.move_count,
-            cp, pv), flush=True)
+        print(
+            "info nps {} time {} nodes {} score cp {} pv {}".format(
+                int(self.playout_count / finish_time) if finish_time > 0 else 0,
+                int(finish_time * 1000),
+                current_node.move_count,
+                cp,
+                pv,
+            ),
+            flush=True,
+        )
 
         return bestmove, bestvalue, ponder_move
 
     # 探索を打ち切るか確認
-    def check_interruption(self):
-        # プレイアウト数数が閾値を超えている
+    def check_interruption(self) -> bool:
+        # プレイアウト数が閾値を超えている
         if self.halt is not None:
             return self.playout_count >= self.halt
 
         # 候補手が1つの場合、中断する
         current_node = self.tree.current_head
-        if len(current_node.child_move) == 1:
+        if current_node is not None and current_node.child_move is not None and len(current_node.child_move) == 1:
             return True
 
         # 消費時間
@@ -566,46 +614,56 @@ class MCTSPlayer(BasePlayer):
         #   21手目以降かつ、残り時間がある場合、
         #   最善手の探索回数が次善手の探索回数の1.5倍未満
         #   もしくは、勝率が逆なら探索延長する
-        if self.extend_time and \
-           self.root_board.move_number > 20 and \
-           self.remaining_time > self.time_limit * 2 and \
-           (first < second * 1.5 or
-            current_node.child_sum_value[first_index] / child_move_count[first_index] < current_node.child_sum_value[second_index] / child_move_count[second_index]):
+        if (
+            self.extend_time
+            and self.root_board.move_number > 20
+            and self.remaining_time > self.time_limit * 2
+            and (
+                first < second * 1.5
+                or current_node.child_sum_value[first_index] / child_move_count[first_index]
+                < current_node.child_sum_value[second_index] / child_move_count[second_index]
+            )
+        ):
             # 探索時間を2倍に延長
             self.time_limit *= 2
             # 探索延長は1回のみ
             self.extend_time = False
-            print('info string extend_time')
+            print("info string extend_time")
             return False
 
         return True
 
     # 入力特徴量の作成
-    def make_input_features(self, board):
-        make_input_features(board, self.features.numpy()[self.current_batch_index])
+    def make_input_features(self, board: Board) -> None:
+        features_numpy = self.features.numpy()
+        make_input_features(board, features_numpy[self.current_batch_index])
 
     # ノードをキューに追加
-    def queue_node(self, board, node):
+    def queue_node(self, board: Board, node: UctNode) -> None:
         # 入力特徴量を作成
         self.make_input_features(board)
 
         # ノードをキューに追加
+        if self.eval_queue is None:
+            raise ValueError("eval_queue is None")
         self.eval_queue[self.current_batch_index].set(node, board.turn)
         self.current_batch_index += 1
 
     # 推論
-    def infer(self):
+    def infer(self) -> tuple[np.ndarray, np.ndarray]:
         with torch.no_grad():
-            x = self.features[0:self.current_batch_index].to(self.device)
+            if self.features is None or self.model is None:
+                raise ValueError("features or model is None")
+            x = self.features[0 : self.current_batch_index].to(self.device)
             policy_logits, value_logits = self.model(x)
             return policy_logits.cpu().numpy(), torch.sigmoid(value_logits).cpu().numpy()
 
     # 着手を表すラベル作成
-    def make_move_label(self, move, color):
+    def make_move_label(self, move: int, color: Union[WHITE, BLACK]) -> int:
         return make_move_label(move, color)
 
     # 局面の評価
-    def eval_node(self):
+    def eval_node(self) -> None:
         # 推論
         policy_logits, values = self.infer()
 
@@ -627,7 +685,8 @@ class MCTSPlayer(BasePlayer):
             current_node.policy = probabilities
             current_node.value = float(value)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     player = MCTSPlayer()
     player.run()
-    #dlshogi 1/6
+    # dlshogi 1/6

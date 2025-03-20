@@ -1,11 +1,43 @@
-from cshogi import *
+import cshogi
+from cshogi import (
+    BLACK,
+    WHITE,
+    PIECE_TYPES,
+    MAX_PIECES_IN_HAND,
+    HAND_PIECES,
+    move_is_drop,
+    move_to,
+    move_from,
+    move_is_promotion,
+    move_drop_hand_piece,
+    BLACK_WIN,
+    WHITE_WIN,
+)
+import numpy as np
+from typing import Union
 
 # 移動方向を表す定数
 MOVE_DIRECTION = [
-    UP, UP_LEFT, UP_RIGHT, LEFT, RIGHT, DOWN, DOWN_LEFT, DOWN_RIGHT,
-    UP2_LEFT, UP2_RIGHT,
-    UP_PROMOTE, UP_LEFT_PROMOTE, UP_RIGHT_PROMOTE, LEFT_PROMOTE, RIGHT_PROMOTE, DOWN_PROMOTE, DOWN_LEFT_PROMOTE, DOWN_RIGHT_PROMOTE,
-    UP2_LEFT_PROMOTE, UP2_RIGHT_PROMOTE
+    UP,
+    UP_LEFT,
+    UP_RIGHT,
+    LEFT,
+    RIGHT,
+    DOWN,
+    DOWN_LEFT,
+    DOWN_RIGHT,
+    UP2_LEFT,
+    UP2_RIGHT,
+    UP_PROMOTE,
+    UP_LEFT_PROMOTE,
+    UP_RIGHT_PROMOTE,
+    LEFT_PROMOTE,
+    RIGHT_PROMOTE,
+    DOWN_PROMOTE,
+    DOWN_LEFT_PROMOTE,
+    DOWN_RIGHT_PROMOTE,
+    UP2_LEFT_PROMOTE,
+    UP2_RIGHT_PROMOTE,
 ] = range(20)
 
 # 入力特徴量の数
@@ -15,8 +47,9 @@ FEATURES_NUM = len(PIECE_TYPES) * 2 + sum(MAX_PIECES_IN_HAND) * 2
 MOVE_PLANES_NUM = len(MOVE_DIRECTION) + len(HAND_PIECES)
 MOVE_LABELS_NUM = MOVE_PLANES_NUM * 81
 
+
 # 入力特徴量を作成
-def make_input_features(board, features):
+def make_input_features(board: cshogi.Board, features: np.ndarray) -> None:
     # 入力特徴量を0に初期化
     features.fill(0)
 
@@ -31,14 +64,15 @@ def make_input_features(board, features):
     i = 28
     for hands in pieces_in_hand:
         for num, max_num in zip(hands, MAX_PIECES_IN_HAND):
-            features[i:i+num].fill(1)
+            features[i : i + num].fill(1)
             i += max_num
 
+
 # 移動を表すラベルを作成(方策ネットワーク出力)
-def make_move_label(move, color):
+def make_move_label(move: int, color: Union[WHITE, BLACK]) -> int:
     if not move_is_drop(move):  # 駒の移動
-        to_sq = move_to(move) # 移動元
-        from_sq = move_from(move) # 移動先
+        to_sq: int = move_to(move)  # 移動元
+        from_sq = move_from(move)  # 移動先
 
         # 後手の場合盤を回転
         if color == WHITE:
@@ -86,10 +120,11 @@ def make_move_label(move, color):
         # 駒打ちの移動方向
         move_direction = len(MOVE_DIRECTION) + move_drop_hand_piece(move)
 
-    return move_direction * 81 + to_sq
+    return int(move_direction * 81 + to_sq)
+
 
 # 対局結果から報酬を作成(価値ネットワーク出力)
-def make_result(game_result, color):
+def make_result(game_result: Union[WHITE_WIN, BLACK_WIN], color: Union[WHITE_WIN, BLACK_WIN]) -> float:
     if color == BLACK:
         if game_result == BLACK_WIN:
             return 1
@@ -101,4 +136,4 @@ def make_result(game_result, color):
         if game_result == WHITE_WIN:
             return 1
     return 0.5
-    #dlshogi 1/6
+    # dlshogi 1/6
