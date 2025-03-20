@@ -1,0 +1,23 @@
+[project]
+name = "shogiai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "cshogi>=0.8.8",
+    "mypy>=1.15.0",
+    "onnxruntime>=1.20.1",
+    "pre-commit>=4.1.0",
+    "ruff>=0.9.9",
+    "torch>=2.6.0",
+    "typer>=0.15.2",
+]
+
+[tool.ruff]
+line-length = 120  # 1行の最大長
+target-version = "py311"  # 使用するPythonのバージョン
+exclude = ["_prev"]
+
+[tool.mypy]
+exclude = "^(_prev)/.*"
