@@ -20,7 +20,7 @@ class UctNode:
         return self.child_node[index]
 
     # ノードの展開
-    def expand_node(self, board: cshogi.BOARD) -> None:
+    def expand_node(self, board: cshogi.Board) -> None:
         self.child_move = list(board.legal_moves)
         child_num = len(self.child_move)
         self.child_move_count = np.zeros(child_num, dtype=np.int32)
