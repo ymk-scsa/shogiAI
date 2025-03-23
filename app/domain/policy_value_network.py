@@ -35,9 +35,9 @@ class ResNetBlock(nn.Module):
 
 
 class PolicyValueNetwork(nn.Module):
-    def __init__(self, blocks: int = 10, channels: int = 192, fcl: int = 256):
+    def __init__(self, blocks: int = 10, channels: int = 192, fcl: int = 256, features_num: int = FEATURES_NUM):
         super(PolicyValueNetwork, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=FEATURES_NUM, out_channels=channels, kernel_size=3, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels=features_num, out_channels=channels, kernel_size=3, padding=1, bias=False)
         self.norm1 = nn.BatchNorm2d(channels)
 
         # resnet blocks

@@ -2,6 +2,7 @@ import torch
 import torch.optim as optim
 from typing import Optional
 
+from app.domain.features import FEATURES_SETTINGS
 from app.interfaces.logger import Logger
 from app.domain.policy_value_network import PolicyValueNetwork
 from app.infrastructure.dataloader import HcpeDataLoader
@@ -24,6 +25,7 @@ def train(
     resume: Annotated[str, typer.Option("-r", help="Resume from snapshot")] = "",
     eval_interval: Annotated[int, typer.Option(help="evaluation interval")] = 100,
     log: Annotated[Optional[str], typer.Option(help="log file path")] = None,
+    features_mode: Annotated[int, typer.Option(help="select custom features mode (default: 0, kiki: 1)")] = 0,
 ) -> None:
     """Train policy value network"""
 
@@ -37,8 +39,10 @@ def train(
     else:
         device = torch.device("cpu")
 
+    features_setting = FEATURES_SETTINGS[features_mode]
+
     # モデル
-    model = PolicyValueNetwork()
+    model = PolicyValueNetwork(features_num=features_setting.features_num)
     model.to(device)
 
     # オプティマイザ
@@ -64,10 +68,10 @@ def train(
 
     # 訓練データ読み込み
     logging.info("Reading training data")
-    train_dataloader = HcpeDataLoader(train_data, batchsize, device, shuffle=True)
+    train_dataloader = HcpeDataLoader(train_data, batchsize, device, shuffle=True, features_mode=features_mode)
     # テストデータ読み込み
     logging.info("Reading test data")
-    test_dataloader = HcpeDataLoader(test_data, testbatchsize, device)
+    test_dataloader = HcpeDataLoader(test_data, testbatchsize, device, features_mode=features_mode)
 
     # 読み込んだデータ数を表示
     logging.info("train position num = {}".format(len(train_dataloader)))
