@@ -1,2 +1,3 @@
-#!/bin/zsh
-python -m app.usecases.mcts_player
+export PATH=$HOME/.local/bin:$PATH
+export PYTHONPATH=$(pwd)
+uv run app/main.py play-mcts

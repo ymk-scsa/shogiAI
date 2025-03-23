@@ -36,11 +36,7 @@ fi
 # データを解凍
 echo "🔧 データを解凍中..."
 for month in {01..12}; do
-    if ! ls ${YEAR}/*${YEAR}${month}*.csa &> /dev/null; then
-        7z -aoa x wdoor${YEAR}.7z ${YEAR}/*${YEAR}${month}*.csa
-        echo "✅ データ(${YEAR}/*${YEAR}${month}*.csa)を解凍しました。"
-    else
-        echo "✅ データ(${YEAR}/*${YEAR}${month}*.csa)は既に存在します。"
-    fi
+    7z -aos x wdoor${YEAR}.7z ${YEAR}/*${YEAR}${month}*.csa
+    echo "✅ データ(${YEAR}/*${YEAR}${month}*.csa)を解凍しました。"
 done
 echo "✅ データの取得が完了しました。"
