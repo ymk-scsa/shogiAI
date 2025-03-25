@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from app.domain.features import FEATURES_NUM, MOVE_PLANES_NUM, MOVE_LABELS_NUM
+from app.domain.features import MOVE_PLANES_NUM, MOVE_LABELS_NUM
 
 
 class Bias(nn.Module):
@@ -35,9 +35,9 @@ class ResNetBlock(nn.Module):
 
 
 class PolicyValueNetwork(nn.Module):
-    def __init__(self, blocks: int = 10, channels: int = 192, fcl: int = 256, features_num: int = FEATURES_NUM):
+    def __init__(self, input_features: int, blocks: int = 10, channels: int = 192, fcl: int = 256):
         super(PolicyValueNetwork, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=features_num, out_channels=channels, kernel_size=3, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels=input_features, out_channels=channels, kernel_size=3, padding=1, bias=False)
         self.norm1 = nn.BatchNorm2d(channels)
 
         # resnet blocks

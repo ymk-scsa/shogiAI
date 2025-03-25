@@ -181,7 +181,7 @@ class MCTSPlayer(BasePlayer):
 
     # モデルのロード
     def load_model(self) -> None:
-        self.model = PolicyValueNetwork(features_num=self.features_setting.features_num)
+        self.model = PolicyValueNetwork(input_features=self.features_setting.features_num)
         self.model.to(self.device)
         checkpoint = torch.load(self.modelfile, map_location=self.device)
         self.model.load_state_dict(checkpoint["model"])
