@@ -5,7 +5,6 @@ from typing import Optional, Union
 from cshogi import (
     Board,
     BLACK,
-    WHITE,
     NOT_REPETITION,
     REPETITION_DRAW,
     REPETITION_WIN,
@@ -659,7 +658,7 @@ class MCTSPlayer(BasePlayer):
             return policy_logits.cpu().numpy(), torch.sigmoid(value_logits).cpu().numpy()
 
     # 着手を表すラベル作成
-    def make_move_label(self, move: int, color: Union[WHITE, BLACK]) -> int:
+    def make_move_label(self, move: int, color: int) -> int:
         return make_move_label(move, color)
 
     # 局面の評価

@@ -14,7 +14,6 @@ from cshogi import (
     WHITE_WIN,
 )
 import numpy as np
-from typing import Union
 
 # 移動方向を表す定数
 MOVE_DIRECTION = [
@@ -69,7 +68,7 @@ def make_input_features(board: cshogi.Board, features: np.ndarray) -> None:
 
 
 # 移動を表すラベルを作成(方策ネットワーク出力)
-def make_move_label(move: int, color: Union[WHITE, BLACK]) -> int:
+def make_move_label(move: int, color: int) -> int:
     if not move_is_drop(move):  # 駒の移動
         to_sq: int = move_to(move)  # 移動元
         from_sq = move_from(move)  # 移動先
@@ -124,7 +123,7 @@ def make_move_label(move: int, color: Union[WHITE, BLACK]) -> int:
 
 
 # 対局結果から報酬を作成(価値ネットワーク出力)
-def make_result(game_result: Union[WHITE_WIN, BLACK_WIN], color: Union[WHITE_WIN, BLACK_WIN]) -> float:
+def make_result(game_result: int, color: int) -> float:
     if color == BLACK:
         if game_result == BLACK_WIN:
             return 1

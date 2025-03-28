@@ -177,3 +177,9 @@ cython_debug/
 logs/*
 # datas
 datas/*
+
+# floodgate data
+floodgate/*
+
+# checkpoints
+checkpoints/*

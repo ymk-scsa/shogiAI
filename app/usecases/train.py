@@ -16,7 +16,7 @@ def train(
     train_data: Annotated[list[str], typer.Option(help="training data file")],
     test_data: Annotated[str, typer.Option(help="test data file")],
     gpu: Annotated[int, typer.Option("-g", help="GPU ID")] = 0,
-    epoch: Annotated[int, typer.Option("-e", help="Number of epoch times")] = 1,
+    train_cnt: Annotated[int, typer.Option("-e", help="Number of epoch times")] = 1,
     batchsize: Annotated[int, typer.Option("-b", help="Number of positions in each mini-batch")] = 1024,
     testbatchsize: Annotated[int, typer.Option(help="Number of positions in each test mini-batch")] = 1024,
     lr: Annotated[float, typer.Option(help="learning rate")] = 0.01,
@@ -96,7 +96,9 @@ def train(
         torch.save(checkpoint_data, path)
 
     # 訓練ループ
-    for e in range(epoch):
+    logging.debug(f"epoch:{train_cnt, range(train_cnt)}")
+    for e in range(train_cnt):
+        logging.debug("start train2")
         # 初期化処理
         epoch += 1
         steps_interval = 0
@@ -107,6 +109,7 @@ def train(
         sum_loss_value_epoch = 0
         # データごとに繰り返す
         for x, move_label, result in train_dataloader:
+            logging.debug("start train3")
             model.train()
 
             # 順伝播
