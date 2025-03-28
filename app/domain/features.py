@@ -1,3 +1,5 @@
+from typing import Callable
+from pydantic import BaseModel
 import cshogi
 from cshogi import (
     BLACK,
@@ -14,6 +16,7 @@ from cshogi import (
     WHITE_WIN,
 )
 import numpy as np
+from app.domain.moves import make_himo_features, make_kiki_features, DIRECTION_NUM
 
 # 移動方向を表す定数
 MOVE_DIRECTION = [
@@ -41,10 +44,18 @@ MOVE_DIRECTION = [
 
 # 入力特徴量の数
 FEATURES_NUM = len(PIECE_TYPES) * 2 + sum(MAX_PIECES_IN_HAND) * 2
+FEATURES_KIKI_NUM = len(PIECE_TYPES) * 2 + sum(MAX_PIECES_IN_HAND) * 2 + DIRECTION_NUM * 2
+FEATURES_HIMO_NUM = len(PIECE_TYPES) * 2 + sum(MAX_PIECES_IN_HAND) * 2 + DIRECTION_NUM * 2
 
 # 移動を表すラベルの数
 MOVE_PLANES_NUM = len(MOVE_DIRECTION) + len(HAND_PIECES)
 MOVE_LABELS_NUM = MOVE_PLANES_NUM * 81
+
+FEATURES_MODE = [
+    FEATURES_DEFAULT,
+    FEATURES_KIKI,
+    FEATURES_HIMO,
+] = range(3)
 
 
 # 入力特徴量を作成
@@ -65,6 +76,34 @@ def make_input_features(board: cshogi.Board, features: np.ndarray) -> None:
         for num, max_num in zip(hands, MAX_PIECES_IN_HAND):
             features[i : i + num].fill(1)
             i += max_num
+
+
+def make_input_features_kiki(board: cshogi.Board, features: np.ndarray) -> None:
+    make_input_features(board, features)
+    make_kiki_features(board, features)
+
+
+def make_input_features_himo(board: cshogi.Board, features: np.ndarray) -> None:
+    make_input_features(board, features)
+    make_himo_features(board, features)
+
+
+class FeaturesSetting(BaseModel):
+    make_features: Callable[[cshogi.Board, np.ndarray], None] = make_input_features
+    features_num: int = FEATURES_NUM
+
+
+FEATURES_SETTINGS = {
+    FEATURES_DEFAULT: FeaturesSetting(),
+    FEATURES_KIKI: FeaturesSetting(
+        make_features=make_input_features_kiki,
+        features_num=FEATURES_KIKI_NUM,
+    ),
+    FEATURES_HIMO: FeaturesSetting(
+        make_features=make_input_features_kiki,
+        features_num=FEATURES_HIMO,
+    ),
+}
 
 
 # 移動を表すラベルを作成(方策ネットワーク出力)

@@ -11,7 +11,7 @@ from cshogi import (
     REPETITION_SUPERIOR,
     move_to_usi,
 )
-from app.domain.features import FEATURES_NUM, make_input_features, make_move_label
+from app.domain.features import FEATURES_SETTINGS, make_move_label
 from app.domain.uct_node import NodeTree, UctNode
 from app.domain.policy_value_network import PolicyValueNetwork
 from app.usecases.base_player import BasePlayer
@@ -92,7 +92,7 @@ class MCTSPlayer(BasePlayer):
     # デフォルトチェックポイント
     DEFAULT_MODELFILE = "checkpoints/checkpoint.pth"
 
-    def __init__(self) -> None:
+    def __init__(self, features_mode: int = 0) -> None:
         super().__init__()
         # チェックポイントのパス
         self.modelfile: str = self.DEFAULT_MODELFILE
@@ -134,6 +134,8 @@ class MCTSPlayer(BasePlayer):
         self.byoyomi_margin: int = DEFAULT_BYOYOMI_MARGIN
         # PV表示間隔
         self.pv_interval: int = DEFAULT_PV_INTERVAL
+
+        self.features_setting = FEATURES_SETTINGS[features_mode]
 
         self.debug = False
 
@@ -179,7 +181,7 @@ class MCTSPlayer(BasePlayer):
 
     # モデルのロード
     def load_model(self) -> None:
-        self.model = PolicyValueNetwork()
+        self.model = PolicyValueNetwork(input_features=self.features_setting.features_num)
         self.model.to(self.device)
         checkpoint = torch.load(self.modelfile, map_location=self.device)
         self.model.load_state_dict(checkpoint["model"])
@@ -189,7 +191,9 @@ class MCTSPlayer(BasePlayer):
     # 入力特徴量の初期化
     def init_features(self) -> None:
         self.features = torch.empty(
-            (self.batch_size, FEATURES_NUM, 9, 9), dtype=torch.float32, pin_memory=(self.gpu_id >= 0)
+            (self.batch_size, self.features_setting.features_num, 9, 9),
+            dtype=torch.float32,
+            pin_memory=(self.gpu_id >= 0),
         )
 
     def isready(self) -> None:
@@ -635,7 +639,7 @@ class MCTSPlayer(BasePlayer):
     # 入力特徴量の作成
     def make_input_features(self, board: Board) -> None:
         features_numpy = self.features.numpy()
-        make_input_features(board, features_numpy[self.current_batch_index])
+        self.features_setting.make_features(board, features_numpy[self.current_batch_index])
 
     # ノードをキューに追加
     def queue_node(self, board: Board, node: UctNode) -> None:

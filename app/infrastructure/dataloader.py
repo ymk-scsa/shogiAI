@@ -6,14 +6,19 @@ import logging
 import torch
 
 from cshogi import Board, HuffmanCodedPosAndEval
-from app.domain.features import FEATURES_NUM, make_input_features, make_move_label, make_result
+from app.domain.features import FEATURES_SETTINGS, make_move_label, make_result
 
 from app.interfaces.logger import Logger
 
 
 class HcpeDataLoader:
     def __init__(
-        self, files: Union[list[str], tuple[str], str], batch_size: int, device: torch.device, shuffle: bool = False
+        self,
+        files: Union[list[str], tuple[str], str],
+        batch_size: int,
+        device: torch.device,
+        shuffle: bool = False,
+        features_mode: int = 0,
     ) -> None:
         self.logging = Logger("hcpe dataloder").get_logger()
         self.load(files)
@@ -21,8 +26,11 @@ class HcpeDataLoader:
         self.device = device
         self.shuffle = shuffle
 
+        self.features_settings = FEATURES_SETTINGS[features_mode]
         self.torch_features = torch.empty(
-            (batch_size, FEATURES_NUM, 9, 9), dtype=torch.float32, pin_memory=device.type != "cpu"
+            (batch_size, self.features_settings.features_num, 9, 9),
+            dtype=torch.float32,
+            pin_memory=device.type != "cpu",
         )
         self.torch_move_label = torch.empty((batch_size), dtype=torch.int64, pin_memory=device.type != "cpu")
         self.torch_result = torch.empty((batch_size, 1), dtype=torch.float32, pin_memory=device.type != "cpu")
@@ -53,7 +61,7 @@ class HcpeDataLoader:
         self.features.fill(0)
         for i, hcpe in enumerate(hcpevec):
             self.board.set_hcp(hcpe["hcp"])  # ボードを設定
-            make_input_features(self.board, self.features[i])  # 入力特徴量の作成
+            self.features_settings.make_features(self.board, self.features[i])  # 入力特徴量の作成
             self.move_label[i] = make_move_label(hcpe["bestMove16"], self.board.turn)  # 正解データ方策
             self.result[i] = make_result(hcpe["gameResult"], self.board.turn)  # 正解データ価値
 
