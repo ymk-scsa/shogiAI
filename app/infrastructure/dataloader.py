@@ -91,13 +91,11 @@ class HcpeDataLoader:
         #    return
 
         self.f = self.executor.submit(self.mini_batch, hcpevec)
-        self.logging.debug("pre_fetched")
 
     def __len__(self) -> int:
         return len(self.data)
 
     def __iter__(self) -> "HcpeDataLoader":
-        self.logging.debug("iter")
         self.i = 0
         self.l = 0
         if self.shuffle:
@@ -106,7 +104,6 @@ class HcpeDataLoader:
         return self
 
     def __next__(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        self.logging.debug(f"self.l:{self.l}, self.data{len(self.data)}")
         if self.l > len(self.data):
             raise StopIteration()
 
