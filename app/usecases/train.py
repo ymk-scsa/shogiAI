@@ -104,7 +104,6 @@ def train(
     # 訓練ループ
     logging.debug(f"epoch:{train_cnt, range(train_cnt)}")
     for e in range(train_cnt):
-        logging.debug("start train2")
         # 初期化処理
         epoch += 1
         steps_interval = 0
@@ -115,7 +114,6 @@ def train(
         sum_loss_value_epoch = 0
         # データごとに繰り返す
         for x, move_label, result in train_dataloader:
-            logging.debug("start train3")
             model.train()
 
             # 順伝播
