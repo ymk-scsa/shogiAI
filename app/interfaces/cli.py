@@ -1,5 +1,5 @@
 import typer
-from app.domain.features import FEATURES_DEFAULT, FEATURES_KIKI
+from app.domain.features import FEATURES_DEFAULT, FEATURES_KIKI, FEATURES_SMALL
 from app.interfaces.logger import Logger
 from app.usecases.train import train_app
 from app.usecases.mcts_player import MCTSPlayer
@@ -25,6 +25,12 @@ def play_mcts() -> None:
 @cli_app.command()
 def play_mcts_kiki() -> None:
     player = MCTSPlayer(features_mode=FEATURES_KIKI)
+    player.run()
+
+
+@cli_app.command()
+def play_mcts_small() -> None:
+    player = MCTSPlayer(features_mode=FEATURES_SMALL)
     player.run()
 
 
