@@ -44,6 +44,8 @@ for file_list, f in zip([file_list_train, file_list_test], [f_train, f_test]):
     position_num = 0
 
     for filepath in file_list:
+        if kif_num % 10000 == 0:
+            print(f"kif_num: {kif_num}")
         try:
             kif_data = shogi.KIF.Parser.parse_file(filepath)[0]
         except Exception as e:
