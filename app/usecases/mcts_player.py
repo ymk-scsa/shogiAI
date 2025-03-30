@@ -92,7 +92,7 @@ class MCTSPlayer(BasePlayer):
     # デフォルトチェックポイント
     DEFAULT_MODELFILE = "checkpoints/checkpoint.pth"
 
-    def __init__(self, features_mode: int = 0) -> None:
+    def __init__(self, features_mode: int = 0, activation_function_mode: int = 0) -> None:
         super().__init__()
         # チェックポイントのパス
         self.modelfile: str = self.DEFAULT_MODELFILE
@@ -136,6 +136,7 @@ class MCTSPlayer(BasePlayer):
         self.pv_interval: int = DEFAULT_PV_INTERVAL
 
         self.features_setting = FEATURES_SETTINGS[features_mode]
+        self.activation_function_mode = activation_function_mode
 
         self.debug = False
 
@@ -181,7 +182,10 @@ class MCTSPlayer(BasePlayer):
 
     # モデルのロード
     def load_model(self) -> None:
-        self.model = PolicyValueNetwork(input_features=self.features_setting.features_num)
+        self.model = PolicyValueNetwork(
+            input_features=self.features_setting.features_num,
+            activation_function_mode=self.activation_function_mode,
+        )
         self.model.to(self.device)
         checkpoint = torch.load(self.modelfile, map_location=self.device)
         self.model.load_state_dict(checkpoint["model"])

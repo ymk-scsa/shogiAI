@@ -1,5 +1,5 @@
 import typer
-from app.domain.features import FEATURES_DEFAULT, FEATURES_KIKI
+from typing_extensions import Annotated
 from app.interfaces.logger import Logger
 from app.usecases.train import train_app
 from app.usecases.mcts_player import MCTSPlayer
@@ -17,14 +17,15 @@ def play_person() -> None:
 
 
 @cli_app.command()
-def play_mcts() -> None:
-    player = MCTSPlayer(features_mode=FEATURES_DEFAULT)
-    player.run()
-
-
-@cli_app.command()
-def play_mcts_kiki() -> None:
-    player = MCTSPlayer(features_mode=FEATURES_KIKI)
+def play_mcts(
+    input_features: Annotated[
+        int, typer.Option("-i", help="select custom input features mode (default: 0, kiki: 1, himo: 2)")
+    ] = 0,
+    activation_function: Annotated[
+        int, typer.Option("-a", help="select custom input features mode (relu: 0, : 1)")
+    ] = 0,
+) -> None:
+    player = MCTSPlayer(features_mode=input_features, activation_function_mode=activation_function)
     player.run()
 
 

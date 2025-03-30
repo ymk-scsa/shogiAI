@@ -28,6 +28,9 @@ def train(
     input_features: Annotated[
         int, typer.Option("-i", help="select custom input features mode (default: 0, kiki: 1, himo: 2)")
     ] = 0,
+    activation_function: Annotated[
+        int, typer.Option("-a", help="select custom input features mode (relu: 0, : 1)")
+    ] = 0,
 ) -> None:
     """Train policy value network"""
 
@@ -44,7 +47,9 @@ def train(
     features_setting = FEATURES_SETTINGS[input_features]
 
     # モデル
-    model = PolicyValueNetwork(input_features=features_setting.features_num)
+    model = PolicyValueNetwork(
+        input_features=features_setting.features_num, activation_function_mode=activation_function
+    )
     model.to(device)
 
     # オプティマイザ
