@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import logging
 import torch
+from typing import Optional
 
 from cshogi import Board, HuffmanCodedPosAndEval
 from app.domain.features import FEATURES_SETTINGS, make_move_label, make_result
@@ -19,12 +20,14 @@ class HcpeDataLoader:
         device: torch.device,
         shuffle: bool = False,
         features_mode: int = 0,
+        limit: Optional[int] = None,
     ) -> None:
         self.logging = Logger("hcpe dataloder").get_logger()
-        self.load(files)
         self.batch_size = batch_size
         self.device = device
         self.shuffle = shuffle
+        self.limit = limit
+        self.load(files)
 
         self.features_settings = FEATURES_SETTINGS[features_mode]
         self.torch_features = torch.empty(
@@ -55,7 +58,13 @@ class HcpeDataLoader:
                 data.append(np.fromfile(path, dtype=HuffmanCodedPosAndEval))
             else:
                 logging.warn("{} not found, skipping".format(path))
+
         self.data = np.concatenate(data)
+
+        if self.limit is not None:
+            if self.shuffle:
+                np.random.shuffle(self.data)
+            self.data = self.data[: self.limit]
 
     def mini_batch(self, hcpevec: np.ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         self.features.fill(0)
