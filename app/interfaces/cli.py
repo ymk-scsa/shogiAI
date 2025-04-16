@@ -1,5 +1,6 @@
 import typer
 from typing_extensions import Annotated
+from app.domain.features import FEATURES_KIKI, FEATURES_SMALL
 from app.interfaces.logger import Logger
 from app.usecases.train import train_app
 from app.usecases.mcts_player import MCTSPlayer
@@ -26,6 +27,18 @@ def play_mcts(
     ] = 0,
 ) -> None:
     player = MCTSPlayer(features_mode=input_features, activation_function_mode=activation_function)
+    player.run()
+
+
+@cli_app.command()
+def play_mcts_kiki() -> None:
+    player = MCTSPlayer(features_mode=FEATURES_KIKI)
+    player.run()
+
+
+@cli_app.command()
+def play_mcts_small() -> None:
+    player = MCTSPlayer(features_mode=FEATURES_SMALL)
     player.run()
 
 
