@@ -46,6 +46,7 @@ MOVE_DIRECTION = [
 FEATURES_NUM = len(PIECE_TYPES) * 2 + sum(MAX_PIECES_IN_HAND) * 2
 FEATURES_KIKI_NUM = len(PIECE_TYPES) * 2 + sum(MAX_PIECES_IN_HAND) * 2 + DIRECTION_NUM * 2
 FEATURES_HIMO_NUM = len(PIECE_TYPES) * 2 + sum(MAX_PIECES_IN_HAND) * 2 + DIRECTION_NUM * 2
+FEATURES_SMALL_NUM = len(PIECE_TYPES) * 2 + len(MAX_PIECES_IN_HAND) * 2
 
 # 移動を表すラベルの数
 MOVE_PLANES_NUM = len(MOVE_DIRECTION) + len(HAND_PIECES)
@@ -55,7 +56,8 @@ FEATURES_MODE = [
     FEATURES_DEFAULT,
     FEATURES_KIKI,
     FEATURES_HIMO,
-] = range(3)
+    FEATURES_SMALL,
+] = range(4)
 
 
 # 入力特徴量を作成
@@ -88,6 +90,27 @@ def make_input_features_himo(board: cshogi.Board, features: np.ndarray) -> None:
     make_himo_features(board, features)
 
 
+def make_input_features_small(board: cshogi.Board, features: np.ndarray) -> None:
+    # 入力特徴量を0に初期化
+    features.fill(0)
+
+    # 盤上の駒
+    if board.turn == BLACK:
+        board.piece_planes(features)
+        pieces_in_hand = board.pieces_in_hand
+    else:
+        board.piece_planes_rotate(features)
+        pieces_in_hand = reversed(board.pieces_in_hand)
+    # 持ち駒
+    i = 28
+    for hands in pieces_in_hand:
+        for num, max_num in zip(hands, MAX_PIECES_IN_HAND):
+            fill = 81 * num // max_num - 1
+            features[i][0 : fill // 9].fill(1)
+            features[i][fill // 9][0 : fill % 9].fill(1)
+            i += 1
+
+
 class FeaturesSetting(BaseModel):
     make_features: Callable[[cshogi.Board, np.ndarray], None] = make_input_features
     features_num: int = FEATURES_NUM
@@ -101,7 +124,11 @@ FEATURES_SETTINGS = {
     ),
     FEATURES_HIMO: FeaturesSetting(
         make_features=make_input_features_kiki,
-        features_num=FEATURES_HIMO,
+        features_num=FEATURES_HIMO_NUM,
+    ),
+    FEATURES_SMALL: FeaturesSetting(
+        make_features=make_input_features_small,
+        features_num=FEATURES_SMALL_NUM,
     ),
 }
 

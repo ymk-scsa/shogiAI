@@ -1,11 +1,13 @@
 import torch
 import torch.optim as optim
 from typing import Optional
+import time
 
 from app.domain.features import FEATURES_SETTINGS
 from app.interfaces.logger import Logger
 from app.domain.policy_value_network import PolicyValueNetwork
 from app.infrastructure.dataloader import HcpeDataLoader
+from app.infrastructure.directory import ensure_directory_exists
 from app.usecases.test import test_model, report_test_result
 from typing_extensions import Annotated
 import typer
@@ -19,15 +21,19 @@ def train(
     test_data: Annotated[str, typer.Option(help="test data file")],
     gpu: Annotated[int, typer.Option("-g", help="GPU ID")] = 0,
     train_cnt: Annotated[int, typer.Option("-e", help="Number of epoch times")] = 1,
-    batchsize: Annotated[int, typer.Option("-b", help="Number of positions in each mini-batch")] = 1024,
-    testbatchsize: Annotated[int, typer.Option(help="Number of positions in each test mini-batch")] = 1024,
-    lr: Annotated[float, typer.Option(help="learning rate")] = 0.01,
-    checkpoint: Annotated[str, typer.Option(help="checkpoint file name")] = "checkpoints/checkpoint-{epoch:03}.pth",
+    batchsize: Annotated[int, typer.Option("-b", help="Number of positions in each mini-batch")] = 2048,
+    testbatchsize: Annotated[int, typer.Option(help="Number of positions in each test mini-batch")] = 2048,
+    lr: Annotated[float, typer.Option(help="learning rate")] = 0.001,
+    checkpoint_base: Annotated[str, typer.Option(help="checkpoint file name")] = "checkpoints/",
+    checkpoint: Annotated[str, typer.Option(help="checkpoint file name")] = "checkpoint-{epoch:03}.pth",
     resume: Annotated[str, typer.Option("-r", help="Resume from snapshot")] = "",
     eval_interval: Annotated[int, typer.Option(help="evaluation interval")] = 100,
     log: Annotated[Optional[str], typer.Option(help="log file path")] = None,
     input_features: Annotated[
         int, typer.Option("-i", help="select custom input features mode (default: 0, kiki: 1, himo: 2)")
+    ] = 0,
+    activation_function: Annotated[
+        int, typer.Option("-a", help="select custom input features mode (relu: 0, : 1)")
     ] = 0,
 ) -> None:
     """Train policy value network"""
@@ -45,7 +51,9 @@ def train(
     features_setting = FEATURES_SETTINGS[input_features]
 
     # モデル
-    model = PolicyValueNetwork(input_features=features_setting.features_num)
+    model = PolicyValueNetwork(
+        input_features=features_setting.features_num, activation_function_mode=activation_function
+    )
     model.to(device)
 
     # オプティマイザ
@@ -57,8 +65,8 @@ def train(
 
     # チェックポイント読み込み
     if resume:
-        logging.info("Loading the checkpoint from {}".format(resume))
-        checkpoint_data = torch.load(resume, map_location=device)
+        logging.info("Loading the checkpoint from {}".format(checkpoint_base + resume))
+        checkpoint_data = torch.load(checkpoint_base + resume, map_location=device)
         epoch = int(checkpoint_data["epoch"])
         t = int(checkpoint_data["t"])
         model.load_state_dict(checkpoint_data["model"])
@@ -100,12 +108,13 @@ def train(
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict(),
         }
+        ensure_directory_exists(path)
         torch.save(checkpoint_data, path)
 
     # 訓練ループ
     logging.debug(f"epoch:{train_cnt, range(train_cnt)}")
+    cache_time = time.time()
     for e in range(train_cnt):
-        logging.debug("start train2")
         # 初期化処理
         epoch += 1
         steps_interval = 0
@@ -116,7 +125,6 @@ def train(
         sum_loss_value_epoch = 0
         # データごとに繰り返す
         for x, move_label, result in train_dataloader:
-            logging.debug("start train3")
             model.train()
 
             # 順伝播
@@ -179,6 +187,10 @@ def train(
                 sum_loss_policy_interval = 0
                 sum_loss_value_interval = 0
 
+            if time.time() - cache_time > 60 * 60:
+                save_checkpoint(checkpoint_base + "cache/" + checkpoint)
+                cache_time = time.time()
+
         # エポックごとのステップ数カウンタと損失合計に加算
         steps_epoch += steps_interval
         sum_loss_policy_epoch += sum_loss_policy_interval
@@ -198,7 +210,7 @@ def train(
 
         # チェックポイント保存
         if checkpoint:
-            save_checkpoint(checkpoint)
+            save_checkpoint(checkpoint_base + checkpoint)
             # dlshogi 1/6
 
 
