@@ -2,12 +2,14 @@ import typer
 from app.domain.features import FEATURES_DEFAULT, FEATURES_KIKI
 from app.interfaces.logger import Logger
 from app.usecases.train import train_app
+from app.usecases.test import test_app
 from app.usecases.mcts_player import MCTSPlayer
 
 cli_app = typer.Typer()
 
 
 cli_app.add_typer(train_app)
+cli_app.add_typer(test_app)
 
 
 @cli_app.command()
