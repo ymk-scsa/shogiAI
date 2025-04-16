@@ -6,6 +6,7 @@ from app.domain.features import FEATURES_SETTINGS
 from app.interfaces.logger import Logger
 from app.domain.policy_value_network import PolicyValueNetwork
 from app.infrastructure.dataloader import HcpeDataLoader
+from app.usecases.test import test_model, report_test_result
 from typing_extensions import Annotated
 import typer
 
@@ -183,36 +184,15 @@ def train(
         sum_loss_policy_epoch += sum_loss_policy_interval
         sum_loss_value_epoch += sum_loss_value_interval
 
-        # エポックの終わりにテストデータすべてを使用して評価する
-        test_steps = 0
-        sum_test_loss_policy = 0
-        sum_test_loss_value = 0
-        sum_test_accuracy_policy: float = 0
-        sum_test_accuracy_value: float = 0
-        model.eval()
-        with torch.no_grad():
-            for x, move_label, result in test_dataloader:
-                y1, y2 = model(x)
-
-                test_steps += 1
-                sum_test_loss_policy += cross_entropy_loss(y1, move_label).item()
-                sum_test_loss_value += bce_with_logits_loss(y2, result).item()
-                sum_test_accuracy_policy += accuracy(y1, move_label)
-                sum_test_accuracy_value += binary_accuracy(y2, result)
-
         # テストデータの検証結果をログ表示
         logging.info(
-            "epoch = {}, steps = {}, train loss avr = {:.07f}, {:.07f}, {:.07f}, test loss = {:.07f}, {:.07f}, {:.07f}, test accuracy = {:.07f}, {:.07f}".format(
+            "epoch = {}, steps = {}, train loss avr = {:.07f}, {:.07f}, {:.07f}, {}".format(
                 epoch,
                 t,
                 sum_loss_policy_epoch / steps_epoch,
                 sum_loss_value_epoch / steps_epoch,
                 (sum_loss_policy_epoch + sum_loss_value_epoch) / steps_epoch,
-                sum_test_loss_policy / test_steps,
-                sum_test_loss_value / test_steps,
-                (sum_test_loss_policy + sum_test_loss_value) / test_steps,
-                sum_test_accuracy_policy / test_steps,
-                sum_test_accuracy_value / test_steps,
+                {report_test_result(test_model(model, test_dataloader))},
             )
         )
 
